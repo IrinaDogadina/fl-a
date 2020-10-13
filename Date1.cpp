@@ -5,7 +5,7 @@ using namespace std;
 
 int main() {
         string Str;
-        cin >> Str;
+        getline(cin, Str);
         int Day = 0;
         int Month = 0;
         int Year = 0;
