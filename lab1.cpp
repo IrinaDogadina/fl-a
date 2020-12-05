@@ -2,25 +2,41 @@
 #include <cstdio>
 using namespace std;
 
-int main()
-{
-        int Term_Q, Un_Term_Q;
+class Symbols {
+char* Term;
+char* Un_Term;
+int Term_Q;
+int Un_Term_Q;
 
+public:
+void init_term();
+void init_un_term();
+};
+
+void Symbols::init_term() {
         cout << "Count of terminal symbols: " << endl;
         cin >> Term_Q;
-        char* Term = new char [Term_Q];
+        Term = new char [Term_Q];
         cout << "Terminal symbols: " << endl;
         for (int i = 0; i < Term_Q; i++) {
                 cin >> Term[i];
         }
+}
 
+void Symbols::init_un_term() {
         cout << "Count of not terminal symbols: " << endl;
         cin >> Un_Term_Q;
-        char* Un_Term = new char [Un_Term_Q];
+        Un_Term = new char [Un_Term_Q];
         cout << "Not terminal symbols: " << endl;
         for (int i = 0; i < Un_Term_Q; i++) {
                 cin >> Un_Term[i];
         }
+}
 
+int main()
+{
+        Symbols laba;
+        laba.init_term();
+        laba.init_un_term();
         return 0;
 }
