@@ -33,6 +33,21 @@ void Symbols::init_un_term() {
         }
 }
 
+class Rules : public Symbols {
+char left_symb;
+char* right_symb;
+
+public:
+void init_left_symb();
+void init_right_symb();
+};
+
+void Rules::init_left_symb(){
+        cout << "Left symbol: " << endl;
+        cin >> left_symb;
+        //я предполагаю где-то здесь должна быть проверка
+}
+
 int main()
 {
         Symbols laba;
