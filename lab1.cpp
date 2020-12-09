@@ -53,6 +53,7 @@ void init_right_symb(Symbols& symb);
 bool Check_left(Symbols& symb);
 bool Check_right(Symbols& symb);
 
+
 friend ostream& operator<<(ostream&, Rules);
 };
 
@@ -130,6 +131,32 @@ ostream& operator<<(ostream& stream, Rules rul) {
         return stream;
 }
 
+class Transformations {
+public:
+
+void Unattainable_States(Symbols& symb, int count_of_rules, Rules* rul);
+};
+
+void Transformations::Unattainable_States(Symbols& symb, int count_of_rules, Rules* rul) {
+        int count_of_attainability[count_of_rules] = {0};
+        for (int i = 0; i < count_of_rules; i++) {
+                for (int j = 0; j < count_of_rules; j++) {
+                        for (int k = 0; k < rul[i].right_symb_Q; k++) {
+                                if (j == i) {
+
+                                }
+                                else {
+                                        if (rul[i].left_symb == rul[j].right_symb[k]) {
+                                                count_of_attainability[i]++;
+                                        }
+                                }
+                        }
+                }
+        }
+        for (int i = 0; i < count_of_rules; i++) {
+                cout << count_of_attainability[i] << " ";
+        }
+}
 int main()
 {
         int Rules_Q = 0;
@@ -149,5 +176,7 @@ int main()
         {
                 cout << rul[i];
         }
+        Transformations transform;
+        transform.Unattainable_States(laba, Rules_Q, rul);
         return 0;
 }
