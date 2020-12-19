@@ -9,6 +9,7 @@ char* Term;
 char* Un_Term;
 int Term_Q;
 int Un_Term_Q;
+char Epsilon;
 
 Symbols() {
         Term = {};
@@ -18,6 +19,8 @@ Symbols() {
 }
 void init_term();
 void init_un_term();
+void init_epsilon();
+int init_new_un_term(int count_of_new_unterminal_symbols);
 };
 
 void Symbols::init_term() {
@@ -42,11 +45,50 @@ void Symbols::init_un_term() {
         }
 }
 
+void Symbols::init_epsilon() {
+        cout << "Epsilon symbol: " << endl;
+        cin >> Epsilon;
+}
+
+int Symbols::init_new_un_term(int count_of_new_unterminal_symbols) {
+        //this check
+        for (int i = 0; i < Un_Term_Q; i++) {
+                if (Un_Term[i] == '@') {
+                        int binary_code = (int)(Un_Term[i-1]);
+                        binary_code++;
+                        Un_Term[i] = (char)(binary_code);
+                }
+        }
+        int binary_code = (int)(Un_Term[Un_Term_Q-1]);
+        int Un_Term_Q_new = Un_Term_Q + count_of_new_unterminal_symbols;
+        char symb[Un_Term_Q_new];
+        for (int i = 0; i < Un_Term_Q; i++) {
+                symb[i] = Un_Term[i];
+        }
+        int i = Un_Term_Q;
+        for (; i < Un_Term_Q_new; i++) {
+                binary_code++;
+                symb[i] = (char)binary_code;
+        }
+        int Old_Un_Term_Q = Un_Term_Q;
+        Un_Term_Q = Un_Term_Q_new;
+        Un_Term = new char [Un_Term_Q];
+        for (int i = 0; i < Un_Term_Q; i++) {
+                Un_Term[i] = symb[i];
+        }
+        return Old_Un_Term_Q;
+}
+
 class Rules {
 public:
 char left_symb;
 char* right_symb;
 int right_symb_Q;
+
+Rules() {
+        left_symb = '0';
+        right_symb_Q = 1;
+}
 
 void init_left_symb(Symbols& symb);
 void init_right_symb(Symbols& symb);
@@ -65,7 +107,6 @@ void Rules::init_left_symb(Symbols& symb){
         while (!Check_left(symb));
 }
 
-//проверка что в левой части только нетерминальный символ
 bool Rules::Check_left(Symbols& symb) {
         for (int i = 0; i < symb.Un_Term_Q; i++) {
                 if (symb.Un_Term[i] == left_symb) {
@@ -74,7 +115,6 @@ bool Rules::Check_left(Symbols& symb) {
         }
         return false;
 }
-
 
 void Rules::init_right_symb(Symbols& symb) {
         do {
@@ -89,14 +129,13 @@ void Rules::init_right_symb(Symbols& symb) {
         while (!Check_right(symb));
 }
 
-//проверка что в правой части символы принадлежат алфавиту
 bool Rules::Check_right(Symbols& symb) {
         int i = 0;
         int w = 0;
         while (i < right_symb_Q) {
                 w = i;
                 for (int j = 0; j < symb.Un_Term_Q; j++) {
-                        if (symb.Un_Term[j] == right_symb[i]) {
+                        if (symb.Un_Term[j] == right_symb[i] || right_symb[i] == symb.Epsilon) {
                                 i++;
                                 break;
                         }
@@ -105,8 +144,9 @@ bool Rules::Check_right(Symbols& symb) {
                         }
 
                 }
+
                 for (int k = 0; k < symb.Term_Q; k++) {
-                        if (symb.Term[k] == right_symb[i]) {
+                        if (symb.Term[k] == right_symb[i] || right_symb[i] == symb.Epsilon) {
                                 i++;
                                 break;
                         }
@@ -135,18 +175,26 @@ class Transformations {
 public:
 
 void Unattainable_States(Symbols& symb, int count_of_rules, Rules* rul);
+void Unsolvable_States(Symbols& symb, int count_of_rules, Rules* rul);
+int Check_Unsolvable_States(Symbols& symb, int count_of_rules, Rules* rul);
+void Check_Recursion(Symbols& symb, int count_of_rules, Rules* rul);
+int Count_of_New_Unterminal_Symbols(Symbols& symb, int count_of_rules, Rules* rul);
+bool Check_of_Start_Symbol(Symbols& symb, int count_of_rules, Rules* rul);
+void Mixed_Chains(Symbols& symb, int count_of_rules, Rules* rul, int count_of_new_rules, Rules* new_rules, int old_count);
+bool Check_Long_Rules(Symbols& symb, int count_of_rules, Rules* rul);
+bool Check_Epsilon_Symbol(Symbols& symb, int count_of_rules, Rules* rul);
 };
 
 void Transformations::Unattainable_States(Symbols& symb, int count_of_rules, Rules* rul) {
         int count_of_attainability[count_of_rules] = {0};
         for (int i = 0; i < count_of_rules; i++) {
                 for (int j = 0; j < count_of_rules; j++) {
-                        for (int k = 0; k < rul[i].right_symb_Q; k++) {
+                        for (int k = 0; k < rul[j].right_symb_Q; k++) {
                                 if (j == i) {
 
                                 }
                                 else {
-                                        if (rul[i].left_symb == rul[j].right_symb[k]) {
+                                        if ((rul[i].left_symb == rul[j].right_symb[k]) || (rul[i].left_symb == rul[0].left_symb)) {
                                                 count_of_attainability[i]++;
                                         }
                                 }
@@ -154,29 +202,298 @@ void Transformations::Unattainable_States(Symbols& symb, int count_of_rules, Rul
                 }
         }
         for (int i = 0; i < count_of_rules; i++) {
-                cout << count_of_attainability[i] << " ";
+                if (count_of_attainability[i] == 0) {
+                        rul[i].left_symb = '@';
+                }
+        }
+        for (int i = 0; i < count_of_rules; i++) {
+                if (rul[i].left_symb == '@') {
+                        for (int j = 0; j < rul[i].right_symb_Q; j++) {
+                                for (int k = 0; k < symb.Un_Term_Q; k++) {
+                                        if (rul[i].right_symb[j] == symb.Un_Term[k]) {
+                                                for (int n = 0; n < count_of_rules; n++) {
+                                                        if (symb.Un_Term[k] == rul[n].left_symb) {
+                                                                rul[n].left_symb = '@';
+                                                        }
+                                                }
+                                        }
+                                }
+                        }
+                }
+        }
+        cout << "Rules without unattainable states:" << endl << endl;
+        for (int i = 0; i < count_of_rules; i++) {
+                if (rul[i].left_symb != '@') {
+                        cout << rul[i].left_symb << "-> ";
+                        for (int j = 0; j < rul[i].right_symb_Q; j++) {
+                                cout << rul[i].right_symb[j];
+                        }
+                        cout << endl;
+                }
         }
 }
+
+void Transformations::Unsolvable_States(Symbols& symb, int count_of_rules, Rules* rul) {
+        int unsolvable_state = 0;
+        do {
+                Check_Recursion(symb, count_of_rules, rul);
+                unsolvable_state = Check_Unsolvable_States(symb, count_of_rules, rul);
+                rul[unsolvable_state].left_symb = '@';
+        }
+        while (unsolvable_state >= 0);
+        cout << "Rules without unsolvable states:" << endl << endl;
+        for (int i = 0; i < count_of_rules; i++) {
+                if (rul[i].left_symb != '@') {
+                        cout << rul[i].left_symb << "-> ";
+                        for (int j = 0; j < rul[i].right_symb_Q; j++) {
+                                cout << rul[i].right_symb[j];
+                        }
+                        cout << endl;
+                }
+        }
+}
+
+int Transformations::Check_Unsolvable_States(Symbols& symb, int count_of_rules, Rules* rul) {
+        int availability_of_rule[count_of_rules] = {0};
+        for (int i = 0; i < count_of_rules; i++) {
+                if (rul[i].left_symb != '@') {
+                        for (int j = 0; j < rul[i].right_symb_Q; j++) {
+                                for (int k = 0; k < symb.Un_Term_Q; k++) {
+                                        if (rul[i].right_symb[j] == symb.Un_Term[k]) {
+                                                for (int n = 0; n < count_of_rules; n++) {
+                                                        if (rul[i].right_symb[j] == rul[n].left_symb) {
+                                                                availability_of_rule[i]++;
+                                                        }
+                                                }
+
+                                        }
+                                        if (rul[i].right_symb[j] == symb.Epsilon) {
+                                                availability_of_rule[i]++;
+                                        }
+                                }
+                        }
+
+                }
+        }
+        int count_of_terminal_symbols = 0;
+        for (int i = 0; i < count_of_rules; i++) {
+                if (rul[i].left_symb != '@') {
+                        for (int j = 0; j < rul[i].right_symb_Q; j++) {
+                                for (int k = 0; k < symb.Term_Q; k++) {
+                                        if (rul[i].right_symb[j] == symb.Term[k]) {
+                                                count_of_terminal_symbols++;
+                                        }
+                                }
+                        }
+                        if (count_of_terminal_symbols == rul[i].right_symb_Q) {
+                                availability_of_rule[i] = 1;
+                        }
+                        count_of_terminal_symbols = 0;
+                }
+        }
+        for (int i = 0; i < count_of_rules; i++) {
+                if (availability_of_rule[i] == 0) {
+                        if (rul[i].left_symb != '@') {
+                                return i;
+                        }
+
+                }
+        }
+        return -1;
+}
+
+void Transformations::Check_Recursion(Symbols& symb, int count_of_rules, Rules* rul) {
+        int count_of_eponymous_rules = 0;
+        for (int i = 0; i < count_of_rules; i++) {
+                if (rul[i].left_symb != '@') {
+                        for (int j = 0; j < rul[i].right_symb_Q; j++) {
+                                if (rul[i].left_symb == rul[i].right_symb[j]) {
+                                        for (int k = 0; k < count_of_rules; k++) {
+                                                if (rul[i].left_symb == rul[k].left_symb && i != k) {
+                                                        count_of_eponymous_rules++;
+                                                }
+                                        }
+                                        if (count_of_eponymous_rules == 0) {
+                                                rul[i].left_symb = '@';
+                                        }
+                                        count_of_eponymous_rules = 0;
+                                }
+                        }
+                }
+        }
+}
+
+int Transformations::Count_of_New_Unterminal_Symbols(Symbols& symb, int count_of_rules, Rules* rul) {
+        int count_of_new_unterminal_symbols = 0;
+        for (int i = 0; i < count_of_rules; i++) {
+                if (rul[i].left_symb != '@') {
+                        if (rul[i].right_symb_Q > 1) {
+                                for (int j = 0; j < rul[i].right_symb_Q; j++) {
+                                        for (int k = 0; k < symb.Term_Q; k++) {
+                                                if (rul[i].right_symb[j] == symb.Term[k]) {
+                                                        count_of_new_unterminal_symbols++;
+                                                }
+                                        }
+                                }
+                        }
+
+                }
+        }
+        return count_of_new_unterminal_symbols;
+}
+
+bool Transformations::Check_of_Start_Symbol(Symbols& symb, int count_of_rules, Rules* rul) {
+        for (int i = 0; i < count_of_rules; i++) {
+                if (rul[i].left_symb != '@') {
+                        for (int j = 0; j < rul[i].right_symb_Q; j++) {
+                                if (symb.Term[0] == rul[i].right_symb[j]) {
+                                        return true;
+                                }
+                        }
+                }
+        }
+        return false;
+}
+
+void Transformations::Mixed_Chains(Symbols& symb, int count_of_rules, Rules* rul, int count_of_new_rules, Rules* new_rul, int old_count) {
+        bool x = false;
+        for (int i = 0; i < count_of_rules; i++) {
+                for (int j = 0; j < count_of_new_rules; j++) {
+                        while (rul[i].left_symb == '@') {
+                                i++;
+                        }
+                        if (i >= count_of_rules) {
+                                j = count_of_new_rules;
+                        }
+                        if (j != count_of_new_rules) {
+                                new_rul[j].left_symb = rul[i].left_symb;
+                                new_rul[j].right_symb_Q = rul[i].right_symb_Q;
+                                new_rul[j].right_symb = new char [new_rul[j].right_symb_Q];
+                                for (int k = 0; k < rul[i].right_symb_Q; k++) {
+                                        for (int n = 0; n < symb.Term_Q; n++) {
+                                                if (rul[i].right_symb_Q > 1) {
+                                                        if (rul[i].right_symb[k] == symb.Term[n]) {
+                                                                x = true;
+                                                        }
+                                                }
+                                        }
+                                        if (x) {
+                                                new_rul[j].right_symb[k] = symb.Un_Term[old_count];
+                                                new_rul[j+1].left_symb = symb.Un_Term[old_count];
+                                                old_count++;
+                                                new_rul[j+1].right_symb = new char [1];
+                                                new_rul[j+1].right_symb[0] = rul[i].right_symb[k];
+                                                new_rul[j+1].right_symb_Q = 1;
+                                                x = false;
+                                        }
+                                        else {
+                                                new_rul[j].right_symb[k] = rul[i].right_symb[k];
+                                        }
+                                        if ((new_rul[j].right_symb_Q - 1 == k) && (rul[i].right_symb_Q > 1)) {
+                                                j++;
+                                        }
+                                }
+                                i++;
+                        }
+                }
+        }
+        cout << "Rules without mixed chains: " << endl << endl;
+        for (int i = 0; i < count_of_new_rules; i++) {
+                if (new_rul[i].left_symb != '0' && new_rul[i].left_symb != '@') {
+                        cout << new_rul[i].left_symb << "-> ";
+                        for (int j = 0; j < new_rul[i].right_symb_Q; j++) {
+                                cout << new_rul[i].right_symb[j];
+                        }
+                        cout << endl;
+                }
+        }
+}
+
+bool Transformations::Check_Long_Rules(Symbols& symb, int count_of_rules, Rules* rul) {
+        int count_of_long_rules = 0;
+        for (int i = 0; i < count_of_rules; i++) {
+                if (rul[i].right_symb_Q > 2) {
+                        count_of_long_rules++;
+                }
+        }
+        if (count_of_long_rules > 0) {
+                return true;
+        }
+        return false;
+}
+
+bool Transformations::Check_Epsilon_Symbol(Symbols& symb, int count_of_rules, Rules* rul) {
+        int count_of_epsilon_rules = 0;
+        for (int i = 0; i < count_of_rules; i++) {
+                if (rul[i].left_symb != '@' && rul[i].left_symb != '0') {
+                        for (int j = 0; j < rul[i].right_symb_Q; j++) {
+                                if ((rul[i].right_symb[j] == symb.Epsilon) && (rul[i].left_symb != symb.Un_Term[0])) {
+                                        count_of_epsilon_rules++;
+                                }
+                        }
+                }
+        }
+        if (count_of_epsilon_rules > 0) {
+                return true;
+        }
+        return false;
+}
+
 int main()
 {
         int Rules_Q = 0;
         Symbols laba;
+
         laba.init_term();
         laba.init_un_term();
+        laba.init_epsilon();
 
         cout << "Count quantity rules" << endl;
         cin >> Rules_Q;
         Rules* rul =  new Rules[Rules_Q];
-        for(int i = 0; i < Rules_Q; i++)
+        for (int i = 0; i < Rules_Q; i++)
         {
                 rul[i].init_left_symb(laba);
                 rul[i].init_right_symb(laba);
         }
-        for(int i = 0; i < Rules_Q; i++)
+        cout << "------------" << endl;
+        for (int i = 0; i < Rules_Q; i++)
         {
                 cout << rul[i];
         }
+
         Transformations transform;
+
+        cout << "------------" << endl;
         transform.Unattainable_States(laba, Rules_Q, rul);
+
+        cout << "------------" << endl;
+        transform.Unsolvable_States(laba, Rules_Q, rul);
+
+        cout << "------------" << endl;
+        for (int i = 0; i < laba.Un_Term_Q; i++) {
+                cout << laba.Un_Term[i] << " ";
+        }
+        int count_of_new_unterminal_symbols = transform.Count_of_New_Unterminal_Symbols(laba, Rules_Q, rul);
+        int count_of_old_unterminal_symbols = laba.init_new_un_term(count_of_new_unterminal_symbols);
+        int count_of_new_rules = Rules_Q  + count_of_new_unterminal_symbols;
+        Rules* new_rules = new Rules[count_of_new_rules];
+        transform.Mixed_Chains(laba, Rules_Q, rul, count_of_new_rules, new_rules, count_of_old_unterminal_symbols);
+        delete[] rul;
+
+        cout << "------------" << endl;
+        if (!transform.Check_Long_Rules(laba, count_of_new_rules, new_rules)) {
+                cout << "Grammar doesn't contain long rules. Elimination of long rules is pointless." << endl;
+        }
+
+        cout << "------------" << endl;
+        if (!transform.Check_Epsilon_Symbol(laba, count_of_new_rules, new_rules)) {
+                cout << "Epsilon symbol contained only in start symbol. Elimination of epsilon rules is pointless." << endl;
+        }
+
+        if (transform.Check_of_Start_Symbol(laba, Rules_Q, new_rules)) {
+
+        }
+        delete[] new_rules;
         return 0;
 }
