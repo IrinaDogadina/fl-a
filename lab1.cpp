@@ -51,7 +51,6 @@ void Symbols::init_epsilon() {
 }
 
 int Symbols::init_new_un_term(int count_of_new_unterminal_symbols) {
-        //this check
         for (int i = 0; i < Un_Term_Q; i++) {
                 if (Un_Term[i] == '@') {
                         int binary_code = (int)(Un_Term[i-1]);
@@ -443,6 +442,7 @@ bool Transformations::Check_of_Start_Symbol(Symbols& symb, int count_of_rules, R
 void Transformations::Start_Symbol_Replacement(Symbols& symb, int count_of_rules, Rules* rul, int count_of_homsky_rules, Rules* h_rul) {
         h_rul[0].left_symb = symb.Un_Term[symb.Un_Term_Q-1];
         h_rul[0].right_symb_Q = 1;
+        h_rul[0].right_symb = new char [h_rul[0].right_symb_Q];
         h_rul[0].right_symb[0] = symb.Un_Term[0];
         for (int i = 0; i < count_of_rules; i++) {
                 for (int j = 1; j < count_of_homsky_rules; j++) {
@@ -510,9 +510,6 @@ int main() {
         transform.Unsolvable_States(symb, Rules_Q, rul);
 
         cout << "------------" << endl;
-        for (int i = 0; i < symb.Un_Term_Q; i++) {
-                cout << symb.Un_Term[i] << " ";
-        }
         int count_of_new_unterminal_symbols = transform.Count_of_New_Unterminal_Symbols(symb, Rules_Q, rul);
         int count_of_old_unterminal_symbols = symb.init_new_un_term(count_of_new_unterminal_symbols);
         int count_of_new_rules = Rules_Q  + count_of_new_unterminal_symbols;
@@ -534,7 +531,7 @@ int main() {
         if (transform.Check_of_Start_Symbol(symb, Rules_Q, new_rules)) {
                 count_of_old_unterminal_symbols = symb.init_new_un_term(1);
                 int count_of_rules_of_homsky_grammar = count_of_new_rules + 1;
-                Rules* homsky_grammar = new Rules[count_of_new_rules];
+                Rules* homsky_grammar = new Rules[count_of_rules_of_homsky_grammar];
                 transform.Start_Symbol_Replacement(symb, count_of_new_rules, new_rules, count_of_rules_of_homsky_grammar, homsky_grammar);
                 delete[] new_rules;
                 delete[] homsky_grammar;
