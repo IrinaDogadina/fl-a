@@ -179,10 +179,11 @@ void Unsolvable_States(Symbols& symb, int count_of_rules, Rules* rul);
 int Check_Unsolvable_States(Symbols& symb, int count_of_rules, Rules* rul);
 void Check_Recursion(Symbols& symb, int count_of_rules, Rules* rul);
 int Count_of_New_Unterminal_Symbols(Symbols& symb, int count_of_rules, Rules* rul);
-bool Check_of_Start_Symbol(Symbols& symb, int count_of_rules, Rules* rul);
 void Mixed_Chains(Symbols& symb, int count_of_rules, Rules* rul, int count_of_new_rules, Rules* new_rules, int old_count);
 bool Check_Long_Rules(Symbols& symb, int count_of_rules, Rules* rul);
 bool Check_Epsilon_Symbol(Symbols& symb, int count_of_rules, Rules* rul);
+bool Check_of_Start_Symbol(Symbols& symb, int count_of_rules, Rules* rul);
+void Start_Symbol_Replacement(Symbols& symb, int count_of_rules, Rules* rul, int count_of_homsky_rules, Rules* h_rul);
 };
 
 void Transformations::Unattainable_States(Symbols& symb, int count_of_rules, Rules* rul) {
@@ -342,19 +343,6 @@ int Transformations::Count_of_New_Unterminal_Symbols(Symbols& symb, int count_of
         return count_of_new_unterminal_symbols;
 }
 
-bool Transformations::Check_of_Start_Symbol(Symbols& symb, int count_of_rules, Rules* rul) {
-        for (int i = 0; i < count_of_rules; i++) {
-                if (rul[i].left_symb != '@') {
-                        for (int j = 0; j < rul[i].right_symb_Q; j++) {
-                                if (symb.Term[0] == rul[i].right_symb[j]) {
-                                        return true;
-                                }
-                        }
-                }
-        }
-        return false;
-}
-
 void Transformations::Mixed_Chains(Symbols& symb, int count_of_rules, Rules* rul, int count_of_new_rules, Rules* new_rul, int old_count) {
         bool x = false;
         for (int i = 0; i < count_of_rules; i++) {
@@ -439,61 +427,117 @@ bool Transformations::Check_Epsilon_Symbol(Symbols& symb, int count_of_rules, Ru
         return false;
 }
 
-int main()
-{
-        int Rules_Q = 0;
-        Symbols laba;
+bool Transformations::Check_of_Start_Symbol(Symbols& symb, int count_of_rules, Rules* rul) {
+        for (int i = 0; i < count_of_rules; i++) {
+                if (rul[i].left_symb != '@' && rul[i].left_symb != '0') {
+                        for (int j = 0; j < rul[i].right_symb_Q; j++) {
+                                if (symb.Term[0] == rul[i].right_symb[j]) {
+                                        return true;
+                                }
+                        }
+                }
+        }
+        return false;
+}
 
-        laba.init_term();
-        laba.init_un_term();
-        laba.init_epsilon();
+void Transformations::Start_Symbol_Replacement(Symbols& symb, int count_of_rules, Rules* rul, int count_of_homsky_rules, Rules* h_rul) {
+        h_rul[0].left_symb = symb.Un_Term[symb.Un_Term_Q-1];
+        h_rul[0].right_symb_Q = 1;
+        h_rul[0].right_symb[0] = symb.Un_Term[0];
+        for (int i = 0; i < count_of_rules; i++) {
+                for (int j = 1; j < count_of_homsky_rules; j++) {
+                        while (rul[i].left_symb == '@' || rul[i].left_symb == '0') {
+                                i++;
+                        }
+                        if (i >= count_of_rules) {
+                                j = count_of_homsky_rules;
+                        }
+                        if (j != count_of_homsky_rules) {
+                                if (rul[i].right_symb[0] == symb.Epsilon) {
+                                        rul[i].left_symb = symb.Un_Term[symb.Un_Term_Q-1];
+                                }
+                                h_rul[j].left_symb = rul[i].left_symb;
+                                h_rul[j].right_symb_Q = rul[i].right_symb_Q;
+                                h_rul[j].right_symb = new char [h_rul[j].right_symb_Q];
+                                for (int k = 0; k < h_rul[j].right_symb_Q; k++) {
+                                        h_rul[j].right_symb[k] =  rul[i].right_symb[k];
+                                        if ((h_rul[j].right_symb_Q - 1 == k) && (rul[i].right_symb_Q > 1)) {
+                                                j++;
+                                        }
+                                }
+                                i++;
+                        }
+                }
+        }
+        cout << "Homsky grammar: " << endl << endl;
+        for (int i = 0; i < count_of_homsky_rules; i++) {
+                if (h_rul[i].left_symb != '0' && h_rul[i].left_symb != '@' && (int)(h_rul[i].left_symb) != 0) {
+                        cout << h_rul[i].left_symb << "-> ";
+                        for (int j = 0; j < h_rul[i].right_symb_Q; j++) {
+                                cout << h_rul[i].right_symb[j];
+                        }
+                        cout << endl;
+                }
+        }
+}
+
+int main() {
+        int Rules_Q = 0;
+        Symbols symb;
+
+        symb.init_term();
+        symb.init_un_term();
+        symb.init_epsilon();
 
         cout << "Count quantity rules" << endl;
         cin >> Rules_Q;
         Rules* rul =  new Rules[Rules_Q];
-        for (int i = 0; i < Rules_Q; i++)
-        {
-                rul[i].init_left_symb(laba);
-                rul[i].init_right_symb(laba);
+        for (int i = 0; i < Rules_Q; i++) {
+                rul[i].init_left_symb(symb);
+                rul[i].init_right_symb(symb);
         }
         cout << "------------" << endl;
-        for (int i = 0; i < Rules_Q; i++)
-        {
+        for (int i = 0; i < Rules_Q; i++) {
                 cout << rul[i];
         }
 
         Transformations transform;
 
         cout << "------------" << endl;
-        transform.Unattainable_States(laba, Rules_Q, rul);
+        transform.Unattainable_States(symb, Rules_Q, rul);
 
         cout << "------------" << endl;
-        transform.Unsolvable_States(laba, Rules_Q, rul);
+        transform.Unsolvable_States(symb, Rules_Q, rul);
 
         cout << "------------" << endl;
-        for (int i = 0; i < laba.Un_Term_Q; i++) {
-                cout << laba.Un_Term[i] << " ";
+        for (int i = 0; i < symb.Un_Term_Q; i++) {
+                cout << symb.Un_Term[i] << " ";
         }
-        int count_of_new_unterminal_symbols = transform.Count_of_New_Unterminal_Symbols(laba, Rules_Q, rul);
-        int count_of_old_unterminal_symbols = laba.init_new_un_term(count_of_new_unterminal_symbols);
+        int count_of_new_unterminal_symbols = transform.Count_of_New_Unterminal_Symbols(symb, Rules_Q, rul);
+        int count_of_old_unterminal_symbols = symb.init_new_un_term(count_of_new_unterminal_symbols);
         int count_of_new_rules = Rules_Q  + count_of_new_unterminal_symbols;
         Rules* new_rules = new Rules[count_of_new_rules];
-        transform.Mixed_Chains(laba, Rules_Q, rul, count_of_new_rules, new_rules, count_of_old_unterminal_symbols);
+        transform.Mixed_Chains(symb, Rules_Q, rul, count_of_new_rules, new_rules, count_of_old_unterminal_symbols);
         delete[] rul;
 
         cout << "------------" << endl;
-        if (!transform.Check_Long_Rules(laba, count_of_new_rules, new_rules)) {
+        if (!transform.Check_Long_Rules(symb, count_of_new_rules, new_rules)) {
                 cout << "Grammar doesn't contain long rules. Elimination of long rules is pointless." << endl;
         }
 
         cout << "------------" << endl;
-        if (!transform.Check_Epsilon_Symbol(laba, count_of_new_rules, new_rules)) {
+        if (!transform.Check_Epsilon_Symbol(symb, count_of_new_rules, new_rules)) {
                 cout << "Epsilon symbol contained only in start symbol. Elimination of epsilon rules is pointless." << endl;
         }
 
-        if (transform.Check_of_Start_Symbol(laba, Rules_Q, new_rules)) {
-
+        cout << "------------" << endl;
+        if (transform.Check_of_Start_Symbol(symb, Rules_Q, new_rules)) {
+                count_of_old_unterminal_symbols = symb.init_new_un_term(1);
+                int count_of_rules_of_homsky_grammar = count_of_new_rules + 1;
+                Rules* homsky_grammar = new Rules[count_of_new_rules];
+                transform.Start_Symbol_Replacement(symb, count_of_new_rules, new_rules, count_of_rules_of_homsky_grammar, homsky_grammar);
+                delete[] new_rules;
+                delete[] homsky_grammar;
         }
-        delete[] new_rules;
         return 0;
 }
